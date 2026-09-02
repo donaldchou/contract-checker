@@ -1,0 +1,217 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Design tokens
+   ============================================================ */
+:root {
+  /* surfaces */
+  --background: #fafafb;
+  --bg-subtle: #f2f2f5;
+  --card: #ffffff;
+  --surface-2: #f7f7f9;
+
+  /* text */
+  --foreground: #16161c;
+  --ink-2: #3d3d46;
+  --muted: #6f6f7a;
+
+  /* lines */
+  --border: #e9e9ef;
+  --border-strong: #dadae2;
+
+  /* brand */
+  --brand: #4f46e5;
+  --brand-solid: #4f46e5;
+  --brand-hover: #4338ca;
+  --brand-weak: #eef1ff;
+
+  /* accent gradient used for headlines / glows */
+  --grad: linear-gradient(120deg, #6366f1 0%, #8b5cf6 45%, #d946ef 100%);
+
+  /* elevation */
+  --shadow-sm: 0 1px 2px rgba(17, 17, 26, 0.04),
+    0 1px 3px rgba(17, 17, 26, 0.06);
+  --shadow-md: 0 4px 12px -2px rgba(17, 17, 26, 0.08),
+    0 2px 6px -2px rgba(17, 17, 26, 0.06);
+  --shadow-lg: 0 24px 48px -12px rgba(17, 17, 26, 0.18),
+    0 8px 24px -8px rgba(17, 17, 26, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b0b0e;
+    --bg-subtle: #0f0f13;
+    --card: #141419;
+    --surface-2: #1a1a21;
+
+    --foreground: #f3f3f5;
+    --ink-2: #c2c2cb;
+    --muted: #8a8a95;
+
+    --border: #262630;
+    --border-strong: #34343f;
+
+    --brand: #8b90ff;
+    --brand-solid: #4f46e5;
+    --brand-hover: #5b52f2;
+    --brand-weak: #1a1930;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 14px -2px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 24px 56px -12px rgba(0, 0, 0, 0.65);
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-card: var(--card);
+  --color-surface-2: var(--surface-2);
+
+  --color-foreground: var(--foreground);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-brand: var(--brand);
+  --color-brand-solid: var(--brand-solid);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-weak: var(--brand-weak);
+
+  --shadow-elev-sm: var(--shadow-sm);
+  --shadow-elev-md: var(--shadow-md);
+  --shadow-elev-lg: var(--shadow-lg);
+
+  --font-sans: var(--font-noto-tc), var(--font-geist-sans), ui-sans-serif,
+    system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+* {
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 6rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-noto-tc), var(--font-geist-sans), Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--brand) 26%, transparent);
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+/* ============================================================
+   Utilities
+   ============================================================ */
+.gradient-text {
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* faint dotted / grid backdrop for hero + CTA bands */
+.bg-grid {
+  background-image: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--foreground) 6%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--foreground) 6%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(
+    ellipse 70% 60% at 50% 0%,
+    #000 0%,
+    transparent 75%
+  );
+  mask-image: radial-gradient(
+    ellipse 70% 60% at 50% 0%,
+    #000 0%,
+    transparent 75%
+  );
+}
+
+/* soft colored light-source glow */
+.glow {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+@media (prefers-color-scheme: dark) {
+  .glow {
+    opacity: 0.32;
+  }
+}
+
+/* scroll-reveal (paired with Reveal.tsx) */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal[data-shown="true"] {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* subtle entrance for above-the-fold content (no JS) */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-rise {
+  animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise {
+    animation: none;
+  }
+}

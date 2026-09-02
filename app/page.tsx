@@ -29,7 +29,7 @@ function Hero() {
         <div className="mx-auto max-w-3xl text-center">
           <span className="animate-rise inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3.5 py-1.5 text-xs font-medium text-muted backdrop-blur">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            繁體中文 · 由 Gemini 驅動
+            繁體中文 · 自帶 Gemini 金鑰
           </span>
 
           <h1 className="animate-rise mt-6 text-4xl font-semibold leading-[1.1] tracking-tight sm:text-6xl">
@@ -163,8 +163,8 @@ const STEPS = [
   },
   {
     n: "02",
-    title: "上傳合約檔案",
-    body: "支援 PDF、圖片與純文字，最大 10MB。檔案安全存放，AI 直接讀取內容進行分析。",
+    title: "填入你的 Gemini 金鑰並上傳",
+    body: "貼上你自己的 Gemini API 金鑰（只存在瀏覽器），選擇合約檔案，支援 PDF、圖片與純文字，最大 10MB。",
   },
   {
     n: "03",
@@ -246,6 +246,7 @@ function SampleSection() {
 /* ============================================================ Privacy */
 function Privacy() {
   const cards: [string, string][] = [
+    ["自帶金鑰", "Gemini API 金鑰只存在你的瀏覽器，分析時直接送到 Google，不進我們的伺服器。"],
     ["密碼加密", "以 bcrypt 雜湊儲存，資料庫外洩也無法還原明碼。"],
     ["安全登入", "session 存在 http-only cookie，JavaScript 無法讀取。"],
     ["資料隔離", "查詢一律綁定你的帳號 ID，別人的合約對你等同不存在。"],
@@ -255,12 +256,12 @@ function Privacy() {
       <Reveal>
         <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-8 sm:p-12">
           <div className="glow right-[-4rem] top-[-6rem] h-64 w-64 bg-[#6366f1]" />
-          <div className="relative max-w-2xl">
+          <div className="relative">
             <SectionKicker>隱私與安全</SectionKicker>
             <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-              你的合約，只有你看得到
+              你的金鑰與合約，只有你看得到
             </h2>
-            <div className="mt-6 grid gap-5 sm:grid-cols-3">
+            <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {cards.map(([t, b]) => (
                 <div key={t}>
                   <div className="text-sm font-semibold">{t}</div>

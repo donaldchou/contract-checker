@@ -1,5 +1,5 @@
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
+// BYOK：Gemini 金鑰不再從環境變數讀取，改由呼叫端（使用者自帶）傳入。
+//
 // 見 memory: gemini-current-model（2.5-flash 對新用戶 404）。
 // 主要 model 可用 .env.local 的 GEMINI_MODEL 覆寫；主 model 遇到配額 / 過載時
 // 自動退回 lite model（免費配額較寬、延遲低）。
@@ -97,12 +97,13 @@ async function callGemini(
   model: string,
   fileBase64: string,
   mimeType: string,
+  apiKey: string,
 ): Promise<Response> {
   return fetch(endpoint(model), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-goog-api-key": GEMINI_API_KEY as string,
+      "x-goog-api-key": apiKey,
     },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     body: JSON.stringify({
@@ -128,9 +129,10 @@ async function callGemini(
 export async function analyzeContract(
   fileBase64: string,
   mimeType: string,
+  apiKey: string,
 ): Promise<ContractAnalysis> {
-  if (!GEMINI_API_KEY) {
-    throw new Error("請在 .env.local 設定 GEMINI_API_KEY");
+  if (!apiKey) {
+    throw new Error("缺少 Gemini API 金鑰");
   }
 
   const models = PRIMARY_MODEL === FALLBACK_MODEL
@@ -142,7 +144,7 @@ export async function analyzeContract(
   for (const model of models) {
     let res: Response;
     try {
-      res = await callGemini(model, fileBase64, mimeType);
+      res = await callGemini(model, fileBase64, mimeType, apiKey);
     } catch (err) {
       // timeout / 網路錯誤 → 換下一個 model
       lastErr =
@@ -187,6 +189,17 @@ export async function analyzeContract(
     // 非 2xx
     const errText = await res.text();
     lastErr = `${model} API 錯誤 (${res.status})`;
+
+    // 金鑰相關錯誤：直接中止並給明確訊息（換 model 也沒用）
+    if (
+      res.status === 401 ||
+      res.status === 403 ||
+      (res.status === 400 && /api[_ ]?key/i.test(errText))
+    ) {
+      throw new Error(
+        "Gemini API 金鑰無效或沒有存取權限，請確認你填入的金鑰正確、且該專案已啟用 Generative Language API。",
+      );
+    }
     // 429 配額 / 503 過載 → 試下一個 model；其他錯誤直接中止
     if (res.status !== 429 && res.status !== 503) {
       throw new Error(`${lastErr}: ${errText.slice(0, 300)}`);

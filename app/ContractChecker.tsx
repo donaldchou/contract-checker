@@ -51,6 +51,22 @@ const SEVERITY_DOT: Record<Severity, string> = {
 const ACCEPT = ".pdf,.png,.jpg,.jpeg,.webp,.txt";
 const MAX_SIZE = 10 * 1024 * 1024;
 
+// BYOK：使用者自帶的 Gemini 金鑰只存在瀏覽器 localStorage，分析時經 header 送出、伺服器不留存
+const KEY_STORAGE = "gemini-api-key";
+
+function readStoredKey(): string {
+  try {
+    return localStorage.getItem(KEY_STORAGE) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function maskKey(k: string): string {
+  if (k.length <= 8) return "••••";
+  return `${k.slice(0, 4)}••••${k.slice(-4)}`;
+}
+
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -65,7 +81,26 @@ export default function ContractChecker() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ContractRecord | null>(null);
   const [history, setHistory] = useState<ContractRecord[]>([]);
+  const [apiKey, setApiKey] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // 載入瀏覽器已儲存的金鑰（localStorage 只能在 client 讀，故放 effect）
+  useEffect(() => {
+    const stored = readStoredKey();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (stored) setApiKey(stored);
+  }, []);
+
+  const saveKey = useCallback((k: string) => {
+    const trimmed = k.trim();
+    setApiKey(trimmed);
+    try {
+      if (trimmed) localStorage.setItem(KEY_STORAGE, trimmed);
+      else localStorage.removeItem(KEY_STORAGE);
+    } catch {
+      /* 隱私模式等情況忽略 */
+    }
+  }, []);
 
   const loadHistory = useCallback(async () => {
     try {
@@ -116,6 +151,10 @@ export default function ContractChecker() {
       setError("請先從右上角登入或註冊，才能上傳合約。");
       return;
     }
+    if (!apiKey.trim()) {
+      setError("請先在下方輸入你自己的 Gemini API 金鑰。");
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -124,7 +163,11 @@ export default function ContractChecker() {
     try {
       const form = new FormData();
       form.append("file", file);
-      const res = await fetch("/api/analyze", { method: "POST", body: form });
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "x-gemini-api-key": apiKey.trim() },
+        body: form,
+      });
       const data = await res.json();
 
       if (!res.ok) {
@@ -155,8 +198,8 @@ export default function ContractChecker() {
         </h1>
         <p className="mt-3 text-[15px] leading-7 text-ink-2">
           AI
-          會站在你的立場摘要重點、逐條標出風險條款、指出缺漏並給談判建議。支援
-          PDF、圖片與純文字，上限 10MB。
+          會站在你的立場摘要重點、逐條標出風險條款、指出缺漏並給談判建議。使用你自己的
+          Gemini API 金鑰，支援 PDF、圖片與純文字，上限 10MB。
         </p>
       </header>
 
@@ -180,7 +223,9 @@ export default function ContractChecker() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="mt-8">
+      <ApiKeyCard apiKey={apiKey} onSave={saveKey} disabled={!me} />
+
+      <form onSubmit={handleSubmit} className="mt-6">
         <label
           htmlFor="file"
           onDragOver={(e) => {
@@ -231,7 +276,7 @@ export default function ContractChecker() {
 
         <button
           type="submit"
-          disabled={!file || loading || (ready && !me)}
+          disabled={!file || loading || (ready && !me) || !apiKey.trim()}
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-solid px-4 py-3.5 text-sm font-semibold text-white shadow-elev-md transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
         >
           {loading && (
@@ -288,6 +333,132 @@ export default function ContractChecker() {
         </section>
       )}
     </div>
+  );
+}
+
+function ApiKeyCard({
+  apiKey,
+  onSave,
+  disabled,
+}: {
+  apiKey: string;
+  onSave: (k: string) => void;
+  disabled?: boolean;
+}) {
+  const [forceEdit, setForceEdit] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  const hasKey = apiKey.trim().length > 0;
+  const editing = forceEdit || !hasKey;
+
+  return (
+    <section className="mt-8 rounded-2xl border border-border bg-card p-5">
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-weak text-brand">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M14 7a4 4 0 1 1-3.9 5H7v3H4v-3l6.1-.1A4 4 0 0 1 14 7Z"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+        <h2 className="text-sm font-semibold">Gemini API 金鑰</h2>
+        {hasKey && !editing && (
+          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            已設定
+          </span>
+        )}
+      </div>
+
+      {hasKey && !editing ? (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <code className="rounded-lg bg-surface-2 px-2.5 py-1.5 text-xs">
+            {maskKey(apiKey)}
+          </code>
+          <button
+            type="button"
+            onClick={() => {
+              setDraft("");
+              setForceEdit(true);
+            }}
+            className="text-xs font-medium text-brand hover:underline"
+          >
+            更換
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onSave("");
+              setDraft("");
+              setForceEdit(false);
+            }}
+            className="text-xs font-medium text-muted hover:text-foreground"
+          >
+            清除
+          </button>
+        </div>
+      ) : (
+        <form
+          className="mt-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!draft.trim()) return;
+            onSave(draft);
+            setDraft("");
+            setForceEdit(false);
+          }}
+        >
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              type="password"
+              autoComplete="off"
+              placeholder="貼上你的 Gemini API 金鑰"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              disabled={disabled}
+              className="flex-1 rounded-lg border border-border-strong bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-brand disabled:opacity-50"
+            />
+            <button
+              type="submit"
+              disabled={disabled || !draft.trim()}
+              className="rounded-lg bg-brand-solid px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-40"
+            >
+              儲存
+            </button>
+            {hasKey && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft("");
+                  setForceEdit(false);
+                }}
+                className="rounded-lg border border-border-strong px-4 py-2.5 text-sm transition-colors hover:bg-surface-2"
+              >
+                取消
+              </button>
+            )}
+          </div>
+        </form>
+      )}
+
+      <p className="mt-3 text-xs leading-5 text-muted">
+        金鑰只會儲存在<span className="font-medium">你的瀏覽器</span>
+        ，分析時直接送到 Google，不會存進我們的伺服器或資料庫。可到{" "}
+        <a
+          href="https://aistudio.google.com/apikey"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-brand hover:underline"
+        >
+          Google AI Studio
+        </a>{" "}
+        免費申請。
+      </p>
+    </section>
   );
 }
 

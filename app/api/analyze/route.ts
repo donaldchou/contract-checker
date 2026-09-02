@@ -22,6 +22,15 @@ export async function POST(req: Request) {
   const { user, response } = await requireUser();
   if (!user) return response;
 
+  // BYOK：使用者自帶的 Gemini 金鑰，透過 header 傳入，僅用於本次請求、不寫入任何儲存。
+  const apiKey = (req.headers.get("x-gemini-api-key") ?? "").trim();
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: "請先在「Gemini API 金鑰」欄位輸入你自己的金鑰" },
+      { status: 400 },
+    );
+  }
+
   let form: FormData;
   try {
     form = await req.formData();
@@ -66,7 +75,7 @@ export async function POST(req: Request) {
   // 2. 呼叫 Gemini 分析
   let analysis;
   try {
-    analysis = await analyzeContract(bytes.toString("base64"), mimeType);
+    analysis = await analyzeContract(bytes.toString("base64"), mimeType, apiKey);
   } catch (err) {
     console.error("Gemini 分析失敗", err);
     return NextResponse.json(
